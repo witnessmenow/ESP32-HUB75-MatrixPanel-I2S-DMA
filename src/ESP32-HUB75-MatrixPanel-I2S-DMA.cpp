@@ -63,16 +63,16 @@ bool MatrixPanel_I2S_DMA::allocateDMAmemory()
       }
 
       allocated_fb_memory += ptr->getColorDepthSize(); // byte required to display all colour depths for the rows shown at the same time
-      frame_buffer[fb].rowBits.emplace_back(ptr); // save new rowBitStruct pointer into rows vector
+      frame_buffer[fb].rowBits.emplace_back(ptr);      // save new rowBitStruct pointer into rows vector
       ++frame_buffer[fb].rows;
     }
   }
   ESP_LOGI("I2S-DMA", "Allocating %d bytes memory for DMA BCM framebuffer(s).", allocated_fb_memory);
 
   // calculate the lowest LSBMSB_TRANSITION_BIT value that will fit in memory that will meet or exceed the configured refresh rate
-  
-//#define FORCE_COLOR_DEPTH 1
-  
+
+  // #define FORCE_COLOR_DEPTH 1
+
 #if !defined(FORCE_COLOR_DEPTH)
 
   ESP_LOGI("I2S-DMA", "Minimum visual refresh rate (scan rate from panel top to bottom) requested: %d Hz", m_cfg.min_refresh_rate);
@@ -160,16 +160,14 @@ bool MatrixPanel_I2S_DMA::allocateDMAmemory()
 
 } // end allocateDMAmemory()
 
-
-
 /*
-// Version 2.0 March 2023 
+// Version 2.0 March 2023
 int MatrixPanel_I2S_DMA::create_descriptor_links(void *data, size_t size, bool dmadesc_b, bool countonly)
 {
     int len = size;
     uint8_t *data2 = (uint8_t *)data;
 
-    int n = 0;    
+    int n = 0;
     while (len)
     {
         int dmalen = len;
@@ -177,7 +175,7 @@ int MatrixPanel_I2S_DMA::create_descriptor_links(void *data, size_t size, bool d
             dmalen = DMA_MAX;
 
           if (!countonly)
-            dma_bus.create_dma_desc_link(data2, dmalen, dmadesc_b);                
+            dma_bus.create_dma_desc_link(data2, dmalen, dmadesc_b);
 
         len -= dmalen;
         data2 += dmalen;
@@ -194,15 +192,7 @@ void MatrixPanel_I2S_DMA::configureDMA(const HUB75_I2S_CFG &_cfg)
   //   lldesc_t *previous_dmadesc_b     = 0;
   int current_dmadescriptor_offset = 0;
 
-  // HACK: If we need to split the payload in 1/2 so that it doesn't breach DMA_MAX, lets do it by the colour_depth.
-  int num_dma_payload_colour_depths = m_cfg.getPixelColorDepthBits();
-  if (frame_buffer[0].rowBits[0]->getColorDepthSize() > DMA_MAX)
-  {
-    num_dma_payload_colour_depths = 1;
-  }
-
-
- // Fill DMA linked lists for both frames (as in, halves of the HUB75 panel) in sequence (top to bottom) 
+  // Fill DMA linked lists for both frames (as in, halves of the HUB75 panel) in sequence (top to bottom)
   for (int row = 0; row < ROWS_PER_FRAME; row++)
   {
     // first set of data is LSB through MSB, single pass (IF TOTAL SIZE < DMA_MAX) - all colour bits are displayed once, which takes care of everything below and including LSBMSB_TRANSITION_BIT
@@ -415,13 +405,13 @@ void MatrixPanel_I2S_DMA::updateMatrixDMABuffer(uint8_t red, uint8_t green, uint
   /* https://ledshield.wordpress.com/2012/11/13/led-brightness-to-your-eye-gamma-correction-no/ */
   uint16_t red16, green16, blue16;
 #ifndef NO_CIE1931
-  red16 	= lumConvTab[red];
-  green16 	= lumConvTab[green];
-  blue16 	= lumConvTab[blue];
+  red16 = lumConvTab[red];
+  green16 = lumConvTab[green];
+  blue16 = lumConvTab[blue];
 #else
-  red16 	= red << 8;
-  green16 	= green << 8;
-  blue16 	= blue << 8;
+  red16 = red << 8;
+  green16 = green << 8;
+  blue16 = blue << 8;
 #endif
 
   for (uint8_t colour_depth_idx = 0; colour_depth_idx < m_cfg.getPixelColorDepthBits(); colour_depth_idx++) // colour depth - 8 iterations
@@ -657,7 +647,7 @@ void MatrixPanel_I2S_DMA::brtCtrlOEv2(uint8_t brt, const int _buff_id)
 // switch pointer to a row for a specific colour index
 #if defined(SPIRAM_DMA_BUFFER)
     ESP32_I2S_DMA_STORAGE_TYPE *row_hack = fb->rowBits[row_idx]->getDataPtr(0, _buff_id);
-    //Cache_WriteBack_Addr((uint32_t)row_hack, sizeof(ESP32_I2S_DMA_STORAGE_TYPE) * ((fb->rowBits[row_idx]->width * fb->rowBits[row_idx]->colour_depth) - 1));
+    // Cache_WriteBack_Addr((uint32_t)row_hack, sizeof(ESP32_I2S_DMA_STORAGE_TYPE) * ((fb->rowBits[row_idx]->width * fb->rowBits[row_idx]->colour_depth) - 1));
     Cache_WriteBack_Addr((uint32_t)row_hack, fb->rowBits[row_idx]->getColorDepthSize());
 #endif
   } while (row_idx);
