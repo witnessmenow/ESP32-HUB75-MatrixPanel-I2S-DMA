@@ -20,5 +20,6 @@ jobs:
             - source-path: ./
             - name: Adafruit GFX Library
             - name: FastLED
+            - name: AnimatedGIF
           sketch-paths: |
             - examples
