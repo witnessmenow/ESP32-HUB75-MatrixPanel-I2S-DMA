@@ -19,5 +19,6 @@ jobs:
           libraries: |
             - source-path: ./
             - name: Adafruit GFX Library
+            - name: FastLED
           sketch-paths: |
             - examples

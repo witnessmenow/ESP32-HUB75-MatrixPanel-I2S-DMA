@@ -110,11 +110,11 @@ public:
     }
 
     // equivalent methods of the matrix library so it can be just swapped out.
-    void drawPixel(int16_t x, int16_t y, uint16_t color);   // overwrite adafruit implementation
-    void fillScreen(uint16_t color); 			// overwrite adafruit implementation
-    void setRotation(int rotate); 				// overwrite adafruit implementation
-    
-	void fillScreenRGB888(uint8_t r, uint8_t g, uint8_t b);
+    void drawPixel(int16_t x, int16_t y, uint16_t color); // overwrite adafruit implementation
+    void fillScreen(uint16_t color);                      // overwrite adafruit implementation
+    void setRotation(int rotate);                         // overwrite adafruit implementation
+
+    void fillScreenRGB888(uint8_t r, uint8_t g, uint8_t b);
     void clearScreen() { display->clearScreen(); }
     void drawPixelRGB888(int16_t x, int16_t y, uint8_t r, uint8_t g, uint8_t b);
 
@@ -135,7 +135,7 @@ public:
     void drawDisplayTest();
 
     void setPhysicalPanelScanRate(PANEL_SCAN_RATE rate);
-	void setZoomFactor(int scale);
+    void setZoomFactor(int scale);
 
 private:
     MatrixPanel_I2S_DMA *display;
@@ -148,9 +148,9 @@ private:
 
     int16_t virtualResX;
     int16_t virtualResY;
-	
-	int16_t _virtualResX;       ///< Display width as modified by current rotation
-	int16_t _virtualResY;       ///< Display height as modified by current rotation	
+
+    int16_t _virtualResX; ///< Display width as modified by current rotation
+    int16_t _virtualResY; ///< Display height as modified by current rotation
 
     int16_t vmodule_rows;
     int16_t vmodule_cols;
@@ -161,8 +161,8 @@ private:
     int16_t dmaResX; // The width of the chain in pixels (as the DMA engine sees it)
 
     int _rotate = 0;
-	
-	int _scale_factor = 0;
+
+    int _scale_factor = 0;
 
 }; // end Class header
 
@@ -173,204 +173,207 @@ private:
  */
 inline VirtualCoords VirtualMatrixPanel::getCoords(int16_t virt_x, int16_t virt_y)
 {
-	
+
 #if !defined NO_GFX
-	// I don't give any support if Adafruit GFX isn't being used.
-	
+    // I don't give any support if Adafruit GFX isn't being used.
+
     if (virt_x < 0 || virt_x >= _width || virt_y < 0 || virt_y >= _height) // _width and _height are defined in the adafruit constructor
-    {                             // Co-ordinates go from 0 to X-1 remember! otherwise they are out of range!
-        coords.x = coords.y = -1; // By defalt use an invalid co-ordinates that will be rejected by updateMatrixDMABuffer
+    {                                                                      // Co-ordinates go from 0 to X-1 remember! otherwise they are out of range!
+        coords.x = coords.y = -1;                                          // By defalt use an invalid co-ordinates that will be rejected by updateMatrixDMABuffer
         return coords;
     }
 #else
-	
+
     if (virt_x < 0 || virt_x >= _virtualResX || virt_y < 0 || virt_y >= _virtualResY) // _width and _height are defined in the adafruit constructor
-    {                             // Co-ordinates go from 0 to X-1 remember! otherwise they are out of range!
-        coords.x = coords.y = -1; // By defalt use an invalid co-ordinates that will be rejected by updateMatrixDMABuffer
+    {                                                                                 // Co-ordinates go from 0 to X-1 remember! otherwise they are out of range!
+        coords.x = coords.y = -1;                                                     // By defalt use an invalid co-ordinates that will be rejected by updateMatrixDMABuffer
         return coords;
     }
-	
+
 #endif
-    
+
     // Do we want to rotate?
-    switch (_rotate) {
-      case 0: //no rotation, do nothing
-      break;
-      
-      case (1): //90 degree rotation
-      {
+    switch (_rotate)
+    {
+    case 0: // no rotation, do nothing
+        break;
+
+    case (1): // 90 degree rotation
+    {
         int16_t temp_x = virt_x;
         virt_x = virt_y;
         virt_y = virtualResY - 1 - temp_x;
         break;
-      }
+    }
 
-      case (2): //180 rotation
-      {
+    case (2): // 180 rotation
+    {
         virt_x = virtualResX - 1 - virt_x;
         virt_y = virtualResY - 1 - virt_y;
         break;
-      }
+    }
 
-      case (3): //270 rotation
-      {
+    case (3): // 270 rotation
+    {
         int16_t temp_x = virt_x;
         virt_x = virtualResX - 1 - virt_y;
         virt_y = temp_x;
         break;
-      }
+    }
     }
 
     int row = (virt_y / panelResY); // 0 indexed
     switch (panel_chain_type)
     {
-        case (CHAIN_TOP_RIGHT_DOWN):
-        {
-            if ((row % 2) == 1)
-            { // upside down panel
+    case (CHAIN_TOP_RIGHT_DOWN):
+    {
+        if ((row % 2) == 1)
+        { // upside down panel
 
-                // Serial.printf("Condition 1, row %d ", row);
+            // Serial.printf("Condition 1, row %d ", row);
 
-                // reversed for the row
-                coords.x = dmaResX - virt_x - (row * virtualResX);
+            // reversed for the row
+            coords.x = dmaResX - virt_x - (row * virtualResX);
 
-                // y co-ord inverted within the panel
-                coords.y = panelResY - 1 - (virt_y % panelResY);
-            }
-            else
-            {
-                // Serial.printf("Condition 2, row %d ", row);
-                coords.x = ((vmodule_rows - (row + 1)) * virtualResX) + virt_x;
-                coords.y = (virt_y % panelResY);
-            }
+            // y co-ord inverted within the panel
+            coords.y = panelResY - 1 - (virt_y % panelResY);
         }
-        break;
-
-        case (CHAIN_TOP_RIGHT_DOWN_ZZ):
-        {
-            //	Right side up. Starting from top right all the way down.
-            //  Connected in a Zig Zag manner = some long ass cables being used potentially
-
-            // Serial.printf("Condition 2, row %d ", row);
-            coords.x = ((vmodule_rows - (row + 1)) * virtualResX) + virt_x;
-            coords.y = (virt_y % panelResY);
-        }
-        break;
-
-        case (CHAIN_TOP_LEFT_DOWN): // OK -> modulus opposite of CHAIN_TOP_RIGHT_DOWN
-        {
-            if ((row % 2) == 0)
-            { // reversed panel
-
-                // Serial.printf("Condition 1, row %d ", row);
-                coords.x = dmaResX - virt_x - (row * virtualResX);
-
-                // y co-ord inverted within the panel
-                coords.y = panelResY - 1 - (virt_y % panelResY);
-            }
-            else
-            {
-                // Serial.printf("Condition 2, row %d ", row);
-                coords.x = ((vmodule_rows - (row + 1)) * virtualResX) + virt_x;
-                coords.y = (virt_y % panelResY);
-            }
-        }
-        break;
-
-        case (CHAIN_TOP_LEFT_DOWN_ZZ):
+        else
         {
             // Serial.printf("Condition 2, row %d ", row);
             coords.x = ((vmodule_rows - (row + 1)) * virtualResX) + virt_x;
             coords.y = (virt_y % panelResY);
         }
-        break;
+    }
+    break;
 
-        case (CHAIN_BOTTOM_LEFT_UP): //
-        {
-            row = vmodule_rows - row - 1;
+    case (CHAIN_TOP_RIGHT_DOWN_ZZ):
+    {
+        //	Right side up. Starting from top right all the way down.
+        //  Connected in a Zig Zag manner = some long ass cables being used potentially
 
-            if ((row % 2) == 1)
-            {
-                // Serial.printf("Condition 1, row %d ", row);
-                coords.x = ((vmodule_rows - (row + 1)) * virtualResX) + virt_x;
-                coords.y = (virt_y % panelResY);
-            }
-            else
-            { // inverted panel
+        // Serial.printf("Condition 2, row %d ", row);
+        coords.x = ((vmodule_rows - (row + 1)) * virtualResX) + virt_x;
+        coords.y = (virt_y % panelResY);
+    }
+    break;
 
-                // Serial.printf("Condition 2, row %d ", row);
-                coords.x = dmaResX - (row * virtualResX) - virt_x;
-                coords.y = panelResY - 1 - (virt_y % panelResY);
-            }
+    case (CHAIN_TOP_LEFT_DOWN): // OK -> modulus opposite of CHAIN_TOP_RIGHT_DOWN
+    {
+        if ((row % 2) == 0)
+        { // reversed panel
+
+            // Serial.printf("Condition 1, row %d ", row);
+            coords.x = dmaResX - virt_x - (row * virtualResX);
+
+            // y co-ord inverted within the panel
+            coords.y = panelResY - 1 - (virt_y % panelResY);
         }
-        break;
-
-        case (CHAIN_BOTTOM_LEFT_UP_ZZ): //
+        else
         {
-            row = vmodule_rows - row - 1;
+            // Serial.printf("Condition 2, row %d ", row);
+            coords.x = ((vmodule_rows - (row + 1)) * virtualResX) + virt_x;
+            coords.y = (virt_y % panelResY);
+        }
+    }
+    break;
+
+    case (CHAIN_TOP_LEFT_DOWN_ZZ):
+    {
+        // Serial.printf("Condition 2, row %d ", row);
+        coords.x = ((vmodule_rows - (row + 1)) * virtualResX) + virt_x;
+        coords.y = (virt_y % panelResY);
+    }
+    break;
+
+    case (CHAIN_BOTTOM_LEFT_UP): //
+    {
+        row = vmodule_rows - row - 1;
+
+        if ((row % 2) == 1)
+        {
             // Serial.printf("Condition 1, row %d ", row);
             coords.x = ((vmodule_rows - (row + 1)) * virtualResX) + virt_x;
             coords.y = (virt_y % panelResY);
         }
-        break;
+        else
+        { // inverted panel
 
-        case (CHAIN_BOTTOM_RIGHT_UP): // OK -> modulus opposite of CHAIN_BOTTOM_LEFT_UP
-        {
-            row = vmodule_rows - row - 1;
-
-            if ((row % 2) == 0)
-            { // right side up
-
-                // Serial.printf("Condition 1, row %d ", row);
-                // refersed for the row
-                coords.x = ((vmodule_rows - (row + 1)) * virtualResX) + virt_x;
-                coords.y = (virt_y % panelResY);
-            }
-            else
-            { // inverted panel
-
-                // Serial.printf("Condition 2, row %d ", row);
-                coords.x = dmaResX - (row * virtualResX) - virt_x;
-                coords.y = panelResY - 1 - (virt_y % panelResY);
-            }
-        }
-        break;
-
-        case (CHAIN_BOTTOM_RIGHT_UP_ZZ):
-        {
-            //	Right side up. Starting bottom right all the way up.
-            //  Connected in a Zig Zag manner = some long ass cables being used potentially
-
-            row = vmodule_rows - row - 1;
             // Serial.printf("Condition 2, row %d ", row);
+            coords.x = dmaResX - (row * virtualResX) - virt_x;
+            coords.y = panelResY - 1 - (virt_y % panelResY);
+        }
+    }
+    break;
+
+    case (CHAIN_BOTTOM_LEFT_UP_ZZ): //
+    {
+        row = vmodule_rows - row - 1;
+        // Serial.printf("Condition 1, row %d ", row);
+        coords.x = ((vmodule_rows - (row + 1)) * virtualResX) + virt_x;
+        coords.y = (virt_y % panelResY);
+    }
+    break;
+
+    case (CHAIN_BOTTOM_RIGHT_UP): // OK -> modulus opposite of CHAIN_BOTTOM_LEFT_UP
+    {
+        row = vmodule_rows - row - 1;
+
+        if ((row % 2) == 0)
+        { // right side up
+
+            // Serial.printf("Condition 1, row %d ", row);
+            // refersed for the row
             coords.x = ((vmodule_rows - (row + 1)) * virtualResX) + virt_x;
             coords.y = (virt_y % panelResY);
         }
+        else
+        { // inverted panel
+
+            // Serial.printf("Condition 2, row %d ", row);
+            coords.x = dmaResX - (row * virtualResX) - virt_x;
+            coords.y = panelResY - 1 - (virt_y % panelResY);
+        }
+    }
+    break;
+
+    case (CHAIN_BOTTOM_RIGHT_UP_ZZ):
+    {
+        //	Right side up. Starting bottom right all the way up.
+        //  Connected in a Zig Zag manner = some long ass cables being used potentially
+
+        row = vmodule_rows - row - 1;
+        // Serial.printf("Condition 2, row %d ", row);
+        coords.x = ((vmodule_rows - (row + 1)) * virtualResX) + virt_x;
+        coords.y = (virt_y % panelResY);
+    }
+    break;
+
+    // Q: 1 row!? Why?
+    // A: In cases people are only using virtual matrix panel for panels of non-standard scan rates.
+    default:
+        coords.x = virt_x;
+        coords.y = virt_y;
         break;
 
-	    // Q: 1 row!? Why?
-        // A: In cases people are only using virtual matrix panel for panels of non-standard scan rates.
-        default: 
-            coords.x = virt_x; coords.y = virt_y; 
-            break;
-            
     } // end switch
-	
 
     /* START: Pixel remapping AGAIN to convert TWO parallel scanline output that the
      *        the underlying hardware library is designed for (because
      *        there's only 2 x RGB pins... and convert this to 1/4 or something
-     */	
-	
+     */
+
     if ((panel_scan_rate == FOUR_SCAN_32PX_HIGH) || (panel_scan_rate == FOUR_SCAN_64PX_HIGH))
     {
 
-	if (panel_scan_rate == FOUR_SCAN_64PX_HIGH)
-	{
-	    // https://github.com/mrfaptastic/ESP32-HUB75-MatrixPanel-DMA/issues/345#issuecomment-1510401192
-	    if ((virt_y & 8) != ((virt_y & 16) >> 1)) { virt_y = (virt_y & 0b11000) ^ 0b11000 + (virt_y & 0b11100111); }
-	}
-
+        if (panel_scan_rate == FOUR_SCAN_64PX_HIGH)
+        {
+            // https://github.com/mrfaptastic/ESP32-HUB75-MatrixPanel-DMA/issues/345#issuecomment-1510401192
+            if ((virt_y & 8) != ((virt_y & 16) >> 1))
+            {
+                virt_y = ((virt_y & 0b11000) ^ 0b11000) + (virt_y & 0b11100111);
+            }
+        }
 
         /* Convert Real World 'VirtualMatrixPanel' co-ordinates (i.e. Real World pixel you're looking at
            on the panel or chain of panels, per the chaining configuration) to a 1/8 panels
@@ -421,25 +424,27 @@ inline VirtualCoords VirtualMatrixPanel::getCoords(int16_t virt_x, int16_t virt_
 inline void VirtualMatrixPanel::drawPixel(int16_t x, int16_t y, uint16_t color)
 { // adafruit virtual void override
 
-	if (_scale_factor > 1) // only from 2 and beyond
-	{
-		int16_t scaled_x_start_pos = x * _scale_factor;
-		int16_t scaled_y_start_pos = y * _scale_factor;
-		
-		for (int16_t x = 0; x < _scale_factor; x++) {
-			for (int16_t y = 0; y < _scale_factor; y++) {	
-				VirtualCoords result = this->getCoords(scaled_x_start_pos+x, scaled_y_start_pos+y);
-				// Serial.printf("Requested virtual x,y coord (%d, %d), got phyical chain coord of (%d,%d)\n", x,y, coords.x, coords.y);
-				this->display->drawPixel(result.x, result.y, color);
-			}
-		}
-	}
-	else
-	{
-		this->getCoords(x, y);
-		// Serial.printf("Requested virtual x,y coord (%d, %d), got phyical chain coord of (%d,%d)\n", x,y, coords.x, coords.y);
-		this->display->drawPixel(coords.x, coords.y, color);	
-	}
+    if (_scale_factor > 1) // only from 2 and beyond
+    {
+        int16_t scaled_x_start_pos = x * _scale_factor;
+        int16_t scaled_y_start_pos = y * _scale_factor;
+
+        for (int16_t x = 0; x < _scale_factor; x++)
+        {
+            for (int16_t y = 0; y < _scale_factor; y++)
+            {
+                VirtualCoords result = this->getCoords(scaled_x_start_pos + x, scaled_y_start_pos + y);
+                // Serial.printf("Requested virtual x,y coord (%d, %d), got phyical chain coord of (%d,%d)\n", x,y, coords.x, coords.y);
+                this->display->drawPixel(result.x, result.y, color);
+            }
+        }
+    }
+    else
+    {
+        this->getCoords(x, y);
+        // Serial.printf("Requested virtual x,y coord (%d, %d), got phyical chain coord of (%d,%d)\n", x,y, coords.x, coords.y);
+        this->display->drawPixel(coords.x, coords.y, color);
+    }
 }
 
 inline void VirtualMatrixPanel::fillScreen(uint16_t color)
@@ -474,36 +479,35 @@ inline void VirtualMatrixPanel::fillScreen(CRGB color)
 
 inline void VirtualMatrixPanel::setRotation(int rotate)
 {
-  if(rotate < 4 && rotate >= 0)
-    _rotate = rotate;
+    if (rotate < 4 && rotate >= 0)
+        _rotate = rotate;
 
-  // Change the _width and _height variables used by the underlying adafruit gfx library.
-  // Actual pixel rotation / mapping is done in the getCoords function.
-  rotation = (rotate & 3);
-  switch (rotation) {
-  case 0: // nothing
-  case 2: // 180
-	_virtualResX = virtualResX;
-	_virtualResY = virtualResY;
+    // Change the _width and _height variables used by the underlying adafruit gfx library.
+    // Actual pixel rotation / mapping is done in the getCoords function.
+    rotation = (rotate & 3);
+    switch (rotation)
+    {
+    case 0: // nothing
+    case 2: // 180
+        _virtualResX = virtualResX;
+        _virtualResY = virtualResY;
 
-#if !defined NO_GFX	
-    _width = virtualResX; // adafruit base class 
-    _height = virtualResY; // adafruit base class 
-#endif 
-    break;
-  case 1:
-  case 3:
-	_virtualResX = virtualResY;
-	_virtualResY = virtualResX;
-	
-#if !defined NO_GFX		
-    _width = virtualResY; // adafruit base class 
-    _height = virtualResX; // adafruit base class 
-#endif 	
-    break;
-  }
+#if !defined NO_GFX
+        _width = virtualResX;  // adafruit base class
+        _height = virtualResY; // adafruit base class
+#endif
+        break;
+    case 1:
+    case 3:
+        _virtualResX = virtualResY;
+        _virtualResY = virtualResX;
 
-  
+#if !defined NO_GFX
+        _width = virtualResY;  // adafruit base class
+        _height = virtualResX; // adafruit base class
+#endif
+        break;
+    }
 }
 
 inline void VirtualMatrixPanel::setPhysicalPanelScanRate(PANEL_SCAN_RATE rate)
@@ -513,15 +517,14 @@ inline void VirtualMatrixPanel::setPhysicalPanelScanRate(PANEL_SCAN_RATE rate)
 
 inline void VirtualMatrixPanel::setZoomFactor(int scale)
 {
-  if(scale < 5 && scale > 0)
-	_scale_factor = scale;
-
+    if (scale < 5 && scale > 0)
+        _scale_factor = scale;
 }
 
 #ifndef NO_GFX
 inline void VirtualMatrixPanel::drawDisplayTest()
 {
-	// Write to the underlying panels only via the dma_display instance.
+    // Write to the underlying panels only via the dma_display instance.
     this->display->setFont(&FreeSansBold12pt7b);
     this->display->setTextColor(this->display->color565(255, 255, 0));
     this->display->setTextSize(1);
